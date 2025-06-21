@@ -223,7 +223,7 @@ class Ok(Result[E, T]):
 
     __slots__ = ('_value',)
 
-    def __init__(self, value: T):
+    def __init__(self, value: T) -> None:
         self._value = value
 
     def is_ok(self) -> bool:
@@ -249,7 +249,7 @@ class Err(Result[E, T]):
 
     __slots__ = ('_error',)
 
-    def __init__(self, error: E):
+    def __init__(self, error: E) -> None:
         self._error = error
 
     def is_ok(self) -> bool:
@@ -265,7 +265,11 @@ class Err(Result[E, T]):
         return f"Err({self._error!r})"
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Err) and self._error == other._error
+        return (
+            isinstance(other, Err)
+            and type(self._error) is type(other._error)
+            and str(self._error) == str(other._error)
+        )
 
 
 def match_result(
