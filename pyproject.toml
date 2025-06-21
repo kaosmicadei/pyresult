@@ -1,0 +1,14 @@
+[project]
+name = "pyresult"
+version = "0.1.0"
+description = "A helper library to emulate Rust's Result type in Python."
+readme = "README.md"
+authors = [
+    { name = "Kaonan Micadei", email = "6026964+kaosmicadei@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
