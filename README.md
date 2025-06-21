@@ -1,8 +1,8 @@
 # pyresult
 
-A functional `Result` type for Python inspired by Rust’s `Result<T, E>`. It
-provides a composable alternative to try/except, enabling error handling without
-crashing the process or breaking control flow.
+A functional `Result` type for Python inspired by Rust's `Result<T, E>`. It
+provides a composable alternative for error handling without crashing the
+process or breaking control flow.
 
 ## Example
 ```python
