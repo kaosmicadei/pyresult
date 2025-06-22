@@ -58,7 +58,7 @@ class Result(ABC, Generic[E, T]):
         # It is used internally to avoid exposing the error directly.
         ...
 
-    def fold(self, on_ok: Callable[[T], U], on_err: Callable[[E], U]) -> U:
+    def _fold(self, on_ok: Callable[[T], U], on_err: Callable[[E], U]) -> U:
         """Reduces the Result to a single value by applying the appropriate
         function based on whether the Result is Ok or Err.
 
@@ -87,7 +87,7 @@ class Result(ABC, Generic[E, T]):
             if the Result is Err.
         """
 
-        return self.fold(
+        return self._fold(
             on_ok=lambda value: Result.Ok(func(value)),
             on_err=Result.Err
         )
@@ -105,7 +105,7 @@ class Result(ABC, Generic[E, T]):
             Err.
         """
 
-        return self.fold(func, lambda _: default)
+        return self._fold(func, lambda _: default)
 
     def map_or_else(
         self, func: Callable[[T], U], on_err: Callable[[E], U]
@@ -123,7 +123,7 @@ class Result(ABC, Generic[E, T]):
             the error handler if Err.
         """
 
-        return self.fold(func, on_err)
+        return self._fold(func, on_err)
 
     def unwrap_or(self, default: T) -> T:
         """Returns the contained value if the Result is Ok, otherwise returns
@@ -136,7 +136,7 @@ class Result(ABC, Generic[E, T]):
             The contained value if Ok, or the default value if Err.
         """
 
-        return self.fold(lambda value: value, lambda _: default)
+        return self._fold(lambda value: value, lambda _: default)
 
     def unwrap_or_else(self, func: Callable[[E], T]) -> T:
         """Returns the contained value if the Result is Ok, otherwise applies
@@ -150,7 +150,7 @@ class Result(ABC, Generic[E, T]):
             to the error if Err.
         """
 
-        return self.fold(lambda value: value, func)
+        return self._fold(lambda value: value, func)
 
     def and_then(self, func: Callable[[T], Result[E, U]]) -> Result[E, U]:
         """Applies a function that returns a Result to the contained value if
@@ -272,21 +272,22 @@ class Err(Result[E, T]):
         )
 
 
-def match_result(
-    result: Result[E, T], on_ok: Callable[[T], U], on_err: Callable[[E], U]
-) -> U:
-    """Matches a Result and applies the appropriate function based on whether
-    the Result is Ok or Err.
+def resultify(func: Callable[..., T]) -> Callable[..., Result[E, T]]:
+    """Decorator to convert a function that returns a value into a function that
+    returns a Result. If the function raises an exception, it will return an
+    Err containing the exception.
 
     Args:
-        result: The Result to match.
-        on_ok: Function to apply if the Result is Ok, taking the contained
-            value.
-        on_err: Function to apply if the Result is Err, taking the contained
-            error.
+        func: The function to convert.
 
     Returns:
-        A value of type U resulting from applying the appropriate function.
+        A new function that returns a Result.
     """
 
-    return result.fold(on_ok, on_err)
+    def wrapper(*args, **kwargs) -> Result[E, T]:
+        try:
+            return Ok(func(*args, **kwargs))
+        except Exception as e:
+            return Err(e)
+
+    return wrapper

@@ -1,3 +1,3 @@
-from .result import Result, match_result
+from .result import Result, resultify
 
-__all__ = ["Result", "match_result"]
+__all__ = ["Result", "resultify"]
