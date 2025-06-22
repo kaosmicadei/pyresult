@@ -6,7 +6,7 @@ process or breaking control flow.
 
 ## Example
 ```python
-from pyresult import Result, resultify
+from pyresult import Result, lift
 
 
 def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
@@ -16,17 +16,17 @@ def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
     return Result.Ok((key, val))
 
 
-# Convert any funtion into a Result-returning function  returning an
-# `Ok(result)` on success or an `Err(exception)` on an exception.
+# Convert any funtion into a Result-returning function returning an `Ok(result)`
+# on success or an `Err(exception)` on an exception.
 
-@resultify
+@lift.as_result
 def coerce_value(key: str, val: str) -> tuple[str, object]:
     if val.lower() in ("true", "false"):
         return (key, val.lower() == "true")
     elif val.isdigit():
         return (key, int(val))
     else:
-        return (key, val)  # fallback to string
+        return (key, val)  # keep value as string
 
 
 def process_line(line: str) -> Result[ValueError, tuple[str, object]]:
@@ -57,5 +57,4 @@ for i, res in enumerate(results):
 # [OK #2] DEBUG = True
 # [OK #3] LOG_LEVEL = 'info'
 # [ERR #4] ValueError: Missing '=' in line: 'INVALID_LINE'
-
 ```
