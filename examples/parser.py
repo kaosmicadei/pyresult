@@ -1,4 +1,4 @@
-from pyresult import Result
+from pyresult import Result, resultify
 
 
 def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
@@ -8,16 +8,17 @@ def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
     return Result.Ok((key, val))
 
 
-def coerce_value(key: str, val: str) -> Result[ValueError, tuple[str, object]]:
-    try:
-        if val.lower() in ("true", "false"):
-            return Result.Ok((key, val.lower() == "true"))
-        elif val.isdigit():
-            return Result.Ok((key, int(val)))
-        else:
-            return Result.Ok((key, val))  # fallback to string
-    except _ as e:
-        return Result.Err(ValueError(f"Failed to convert {val!r}: {e}"))
+# Convert any funtion into a Result-returning function  returning an
+# `Ok(result)` on success or an `Err(exception)` on an exception.
+
+@resultify
+def coerce_value(key: str, val: str) -> tuple[str, object]:
+    if val.lower() in ("true", "false"):
+        return (key, val.lower() == "true")
+    elif val.isdigit():
+        return (key, int(val))
+    else:
+        return (key, val)  # fallback to string
 
 
 def process_line(line: str) -> Result[ValueError, tuple[str, object]]:
