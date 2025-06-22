@@ -272,22 +272,3 @@ class Err(Result[E, T]):
         )
 
 
-def resultify(func: Callable[..., T]) -> Callable[..., Result[E, T]]:
-    """Decorator to convert a function that returns a value into a function that
-    returns a Result. If the function raises an exception, it will return an
-    Err containing the exception.
-
-    Args:
-        func: The function to convert.
-
-    Returns:
-        A new function that returns a Result.
-    """
-
-    def wrapper(*args, **kwargs) -> Result[E, T]:
-        try:
-            return Ok(func(*args, **kwargs))
-        except Exception as e:
-            return Err(e)
-
-    return wrapper
