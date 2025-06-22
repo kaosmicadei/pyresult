@@ -1,10 +1,23 @@
-from typing import Callable, Generic, TypeVar
+from typing import Callable, TypeVar
 
-from pyresult.result import Result
-from pyresult.option import Option
+from pyresult.types import Result, Option
 
 T = TypeVar('T')
 E = TypeVar('E', bound=BaseException)
+
+
+class lift:
+    """An interface to lift a function into a Result or Option context."""
+
+    @staticmethod
+    def result(func: Callable[..., T]) -> Callable[..., Result[E, T]]:
+        """Lift a function into a Result context."""
+        return as_result(func)
+
+    @staticmethod
+    def option(func: Callable[..., T]) -> Callable[..., Option[T]]:
+        """Lift a function into an Option context."""
+        return as_option(func)
 
 
 def as_result(func: Callable[..., T]) -> Callable[..., Result[E, T]]:

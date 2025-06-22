@@ -1,6 +1,6 @@
 import pytest
 from pyresult import Result
-from pyresult.result import Ok, Err
+from pyresult.types import Ok, Err
 
 
 # Testing Creation and Unwrapping

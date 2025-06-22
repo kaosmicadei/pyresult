@@ -11,7 +11,7 @@ def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
 # Convert any funtion into a Result-returning function  returning an
 # `Ok(result)` on success or an `Err(exception)` on an exception.
 
-@lift.as_result
+@lift.result
 def coerce_value(key: str, val: str) -> tuple[str, object]:
     if val.lower() in ("true", "false"):
         return (key, val.lower() == "true")

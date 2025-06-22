@@ -1,5 +1,4 @@
-from .option import Option
-from .result import Result
-from . import lift_decorator as lift
+from .types import Result, Option
+from .decorators import lift
 
 __all__ = ["Option", "Result", "lift"]

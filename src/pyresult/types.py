@@ -1,13 +1,25 @@
 """
-This module defines a Result type that emulates the behavior of Rust's Result
-type. It allows error handling through a chain of operations without using
-exceptions allowinf failures without crashing the whole process.
+This module defines a Result and a Option types inspiredt on Rust's Result and
+Option types.
 
-It is particularly useful when dealing with batches of inputs where the failure
-of one input should not prevent the processing of the others.
+The Result type is used to represent the outcome of an operation, allowing
+for error handling through a chain of operations without using exceptions.
+
+The Option type is used to represent an optional value, allowing for the
+handling of cases where a value may or may not be present without using
+`None` values.
+
+Both types allow short-circuiting a chain of operations, meaning that if an
+operation fails (in the case of Result) or if a value is not present (in the
+case of Option), the subsequent operations can be skipped. This avoids
+unnecessary computations and allows delaying error handling.
+
+This is particularly useful, when dealing with batches of inputs where the
+failure of one input should not prevent the processing of the others.
 """
 
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, NoReturn, TypeVar
 
@@ -16,6 +28,9 @@ T = TypeVar('T')
 U = TypeVar('U')
 E = TypeVar('E', bound=BaseException)
 
+
+# Result Type
+# ===========
 
 class Result(ABC, Generic[E, T]):
     """A Result type that can either be Ok or Err.
@@ -191,16 +206,6 @@ class Result(ABC, Generic[E, T]):
             return self.unwrap()
         raise RuntimeError(f"{message}: {self._get_error()}")
     
-    def ok_or_none(self) -> T | None:
-        """Returns the contained value if the Result is Ok, otherwise returns
-        None.
-
-        Returns:
-            The contained value if Ok, or None if Err.
-        """
-
-        return self.unwrap_or(None)
-    
     def inspect(self, func: Callable[[T], None]) -> Result[E, T]:
         """Applies a function to the contained value if the Result is Ok,
         allowing side effects without changing the Result.
@@ -214,6 +219,13 @@ class Result(ABC, Generic[E, T]):
         if self.is_ok():
             func(self.unwrap())
         return self
+
+    def as_option(self) -> Option[T]:
+        """Converts the Result into an Option."""
+        return self._fold(
+            on_ok=Option.Some,
+            on_err=lambda _: Option.Nil()
+        )
 
 
 class Ok(Result[E, T]):
@@ -272,3 +284,221 @@ class Err(Result[E, T]):
         )
 
 
+# Option Type
+# ===========
+
+class Option(ABC, Generic[T]):
+    """An Option type that can either be Some or Nil.
+
+    This is a generic class that can be used to represent an optional value.
+    It can hold a value of type T if it exists (Some), or be empty (Nil)
+    if the value does not exist.
+    """
+
+    @staticmethod
+    def Some(value: T) -> Option[T]:
+        """Creates an Option with a value."""
+        return Some(value)
+
+    @staticmethod
+    def Nil() -> Option[T]:
+        """Creates an Option without a value."""
+        return Nil()
+
+    @abstractmethod
+    def unwrap(self) -> T:
+        """Returns the value if it exists, otherwise raises an exception."""
+
+    @abstractmethod
+    def is_some(self) -> bool:
+        """Checks if the Option contains a value."""
+
+    def is_none(self) -> bool:
+        """Checks if the Option does not contain a value."""
+        return not self.is_some()
+
+    def _fold(self, on_some: Callable[[T], U], on_none: Callable[[], U]) -> U:
+        """
+        Applies a function to the value if it exists, otherwise applies
+        another function.
+
+        Args:
+            on_some: Function to apply if the Option is Some, taking the
+                contained value.
+            on_none: Function to apply if the Option is Nil.
+        
+        Returns:
+            A value of type U resulting from applying the appropriate function.
+        """
+
+        return on_some(self.unwrap()) if self.is_some() else on_none()
+
+    def map(self, func: Callable[[T], U]) -> Option[U]:
+        """
+        Applies a function to the value if it exists, returning a new Option.
+
+        Args:
+            func: Function to apply to the contained value if the Option is
+                Some.
+        
+        Returns:
+            A new Option containing the transformed value if Some, or Nil if the
+            Option is Nil.
+        """
+        return self._fold(lambda v: Option.Some(func(v)), Option.Nil)
+
+    def map_or(self, default: U, func: Callable[[T], U]) -> U:
+        """
+        Applies a function to the value if it exists, otherwise returns a
+        default value.
+
+        Args:
+            default: The value to return if the Option is Nil.
+            func: Function to apply to the contained value if the Option is
+                Some.
+        Returns:
+            The result of applying the function if Some, or the default value if
+            Nil.
+        """
+        return self._fold(func, lambda: default)
+
+    def map_or_else(self, default_func: Callable[[], U], func: Callable[[T], U]) -> U:
+        """
+        Applies a function to the value if it exists, otherwise applies a
+        default function.
+
+        Args:
+            default_func: Function to apply if the Option is Nil.
+            func: Function to apply to the contained value if the Option is
+                Some.
+        
+        Returns:
+            The result of applying the function if Some, or the result of
+            applying the default function if Nil.
+        """
+        return self._fold(func, default_func)
+
+    def unwrap_or(self, default: T) -> T:
+        """
+        Returns the value if it exists, otherwise returns a default value.
+        
+        Args:
+            default: The value to return if the Option is Nil.
+
+        Returns:
+            The contained value if Some, or the default value if Nil.
+        """
+        return self._fold(lambda v: v, lambda: default)
+
+    def unwrap_or_else(self, default_func: Callable[[], T]) -> T:
+        """
+        Returns the value if it exists, otherwise applies a default function.
+
+        Args:
+            default_func: Function to apply if the Option is Nil.
+
+        Returns:
+            The contained value if Some, or the result of applying the default
+            function if Nil.
+        """
+        return self._fold(lambda v: v, default_func)
+
+    def and_then(self, func: Callable[[T], Option[U]]) -> Option[U]:
+        """
+        Applies a function that returns an Option to the value if it exists.
+
+        Args:
+            func: Function that takes the contained value and returns an Option.
+
+        Returns:
+            A new Option containing the transformed value if Some, or Nil if the
+            Option is Nil.
+        """
+        return self._fold(func, Option.Nil)
+
+    def expect(self, message: str) -> T:
+        """
+        Returns the value if it exists, otherwise raises an exception with a
+        message.
+
+        Args:
+            message: The message to include in the exception if the Option is
+                Nil.
+        
+        Returns:
+            The contained value if Some.
+        """
+        if self.is_some():
+            return self.unwrap()
+        raise RuntimeError(f"{message}: Called expect on a Nil Option")
+
+    def inspect(self, func: Callable[[T], None]) -> Option[T]:
+        """
+        Applies a function to the value if it exists, returning the Option
+        itself.
+
+        Args:
+            func: Function to apply to the contained value if the Option is
+                Some.
+            
+        Returns:
+            The Option unchanged, allowing for side effects without modifying
+            the Option.
+        """
+        if self.is_some():
+            func(self.unwrap())
+        return self
+    
+    def as_result(self, error: E) -> Result[E, T]:
+        """
+        Converts the Option into a Result, using the provided error if the
+        Option is Nil.
+
+        Args:
+            error: The error to use if the Option is Nil.
+        
+        Returns:
+            A Result containing the value if the Option is Some, or an Err with
+            the provided error if the Option is Nil.
+        """
+        return self._fold(
+            on_some=Result.Ok,
+            on_none=lambda: Result.Err(error)
+        )
+
+
+class Some(Option[T]):
+    """An Option representing a value of type T that exists."""
+
+    __slots__ = ('_value',)
+
+    def __init__(self, value: T):
+        self._value = value
+
+    def unwrap(self) -> T:
+        return self._value
+
+    def is_some(self) -> bool:
+        return True
+
+    def __repr__(self) -> str:
+        return f"Some({self._value!r})"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Some) and self._value == other._value
+
+
+class Nil(Option[T]):
+    """An Option representing the absence of a value."""
+
+    def unwrap(self) -> T:
+        raise RuntimeError("Called unwrap on a Nil Option")
+
+    def is_some(self) -> bool:
+        return False
+
+    def __repr__(self) -> str:
+        return "Nil"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Nil)

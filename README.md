@@ -16,17 +16,17 @@ def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
     return Result.Ok((key, val))
 
 
-# Convert any funtion into a Result-returning function returning an `Ok(result)`
-# on success or an `Err(exception)` on an exception.
+# Convert any funtion into a Result-returning function  returning an
+# `Ok(result)` on success or an `Err(exception)` on an exception.
 
-@lift.as_result
+@lift.result
 def coerce_value(key: str, val: str) -> tuple[str, object]:
     if val.lower() in ("true", "false"):
         return (key, val.lower() == "true")
     elif val.isdigit():
         return (key, int(val))
     else:
-        return (key, val)  # keep value as string
+        return (key, val)  # fallback to string
 
 
 def process_line(line: str) -> Result[ValueError, tuple[str, object]]:
