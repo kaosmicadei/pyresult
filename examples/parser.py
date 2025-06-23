@@ -22,7 +22,7 @@ def convert_var(kv: tuple[str, str]) -> tuple[str, object]:
         return (key, val)  # keep it as string
 
 
-def process_line(line: str) -> Result[ValueError, tuple[str, object]]:
+def process_line(line: str) -> Result[Exception, tuple[str, object]]:
     return (
         parse_var(line)
         .and_then(convert_var)

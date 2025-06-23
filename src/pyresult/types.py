@@ -29,6 +29,7 @@ from typing import Any, Callable, Generic, NoReturn, TypeVar
 T = TypeVar('T')
 U = TypeVar('U')
 E = TypeVar('E', bound=BaseException)
+E1 = TypeVar('E1', bound=BaseException)
 
 
 # Result Type
@@ -142,7 +143,7 @@ class Result(ABC, Generic[E, T]):
 
         return self._fold(func, on_err)
     
-    def map_err(self, func: Callable[[E], U]) -> Result[U, T]:
+    def map_err(self, func: Callable[[E], E1]) -> Result[E1, T]:
         """Applies a function to the contained error if the Result is Err.
         If the Result is Ok, it returns the Ok unchanged.
 
@@ -189,7 +190,7 @@ class Result(ABC, Generic[E, T]):
 
         return self._fold(lambda value: value, func)
 
-    def and_then(self, func: Callable[[T], Result[E, U]]) -> Result[E, U]:
+    def and_then(self, func: Callable[[T], Result[E1, U]]) -> Result[E1, U]:
         """Applies a function that returns a Result to the contained value if
         the Result is Ok. If the Result is Err, it returns the Err unchanged.
 
