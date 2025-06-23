@@ -1,9 +1,9 @@
 """
 This module defines a Result and a Option types inspiredt on Rust's Result and
-Option types.
+Option.
 
 The Result type is used to represent the outcome of an operation, allowing
-for error handling through a chain of operations without using exceptions.
+error handling through a chain of operations without using exceptions.
 
 The Option type is used to represent an optional value, allowing for the
 handling of cases where a value may or may not be present without using
@@ -12,7 +12,7 @@ handling of cases where a value may or may not be present without using
 Both types allow short-circuiting a chain of operations, meaning that if an
 operation fails (in the case of Result) or if a value is not present (in the
 case of Option), the subsequent operations can be skipped. This avoids
-unnecessary computations and allows delaying error handling.
+unnecessary computations.
 
 This is particularly useful, when dealing with batches of inputs where the
 failure of one input should not prevent the processing of the others.
@@ -35,12 +35,12 @@ E = TypeVar('E', bound=BaseException)
 class Result(ABC, Generic[E, T]):
     """A Result type that can either be Ok or Err.
 
-    This is a generic class that can be used to represent the outcome of an
-    operation. It can hold a value of type T if the operation is successful
-    (Ok), or an error of type E if the operation fails (Err).
+    This is a base class used to represent the outcome of an operation. It
+    can hold a value of type T if the operation is successful (Ok), or an
+    error of type E if the operation fails (Err).
 
     This class allows to propagate errors through a chain of operations
-    without using exceptions allowing later decision on how to handle them.
+    without using exceptions and delay the decision on how to handle them.
     """
 
     @staticmethod
