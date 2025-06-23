@@ -43,7 +43,7 @@ def as_result(func: Callable[..., T]) -> Callable[..., Result[E, T]]:
 
 def as_option(func: Callable[..., T]) -> Callable[..., Option[T]]:
     """Decorator to convert a function that returns a value into a function that
-    returns an Option. If the function raises an exception, it will return None.
+    returns an Option. If the function raises an exception, it will return Nil.
 
     Args:
         func: The function to convert.
