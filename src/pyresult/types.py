@@ -2,17 +2,19 @@
 This module defines a Result and a Option types inspiredt on Rust's Result and
 Option.
 
+Their are desined to be used in a more functional programming style.
+
 The Result type is used to represent the outcome of an operation, allowing
-error handling through a chain of operations without using exceptions.
+error handling without using exceptions.
 
 The Option type is used to represent an optional value, allowing for the
-handling of cases where a value may or may not be present without using
-`None` values.
+handling of cases of missing, absent, or undefined values without using
+`None`.
 
-Both types allow short-circuiting a chain of operations, meaning that if an
+Both types allow short-circuiting a chain of operations. It means that if an
 operation fails (in the case of Result) or if a value is not present (in the
-case of Option), the subsequent operations can be skipped. This avoids
-unnecessary computations.
+case of Option), the next operations are skipped avoiding unnecessary
+computations.
 
 This is particularly useful, when dealing with batches of inputs where the
 failure of one input should not prevent the processing of the others.
@@ -35,7 +37,7 @@ E = TypeVar('E', bound=BaseException)
 class Result(ABC, Generic[E, T]):
     """A Result type that can either be Ok or Err.
 
-    This is a base class used to represent the outcome of an operation. It
+    This is a generic class used to represent the outcome of an operation. It
     can hold a value of type T if the operation is successful (Ok), or an
     error of type E if the operation fails (Err).
 
@@ -139,6 +141,26 @@ class Result(ABC, Generic[E, T]):
         """
 
         return self._fold(func, on_err)
+    
+    def map_err(self, func: Callable[[E], U]) -> Result[U, T]:
+        """Applies a function to the contained error if the Result is Err.
+        If the Result is Ok, it returns the Ok unchanged.
+
+        It is intended to transform the error type of the Result, allowing
+        for more specific error handling without changing the contained value.
+
+        Args:
+            func: Function to apply to the contained error if the Result is Err.
+
+        Returns:
+            A new Result containing the transformed error if Err, or the same
+            Ok value if the Result is Ok.
+        """
+
+        return self._fold(
+            on_ok=Result.Ok,
+            on_err=lambda error: Result.Err(func(error))
+        )
 
     def unwrap_or(self, default: T) -> T:
         """Returns the contained value if the Result is Ok, otherwise returns
@@ -172,8 +194,7 @@ class Result(ABC, Generic[E, T]):
         the Result is Ok. If the Result is Err, it returns the Err unchanged.
 
         It is intended to chain operations that return Results, allowing
-        for error propagation without using exceptions. This allows to leave the
-        chain safely and handle the error later.
+        to leave the chain safely and handle the error later.
 
         Args:
             func: Function that takes the contained value and returns a Result.
@@ -210,6 +231,8 @@ class Result(ABC, Generic[E, T]):
         """Applies a function to the contained value if the Result is Ok,
         allowing side effects without changing the Result.
 
+        Useful for debugging or logging purposes.
+
         Args:
             func: Function to apply to the contained value if the Result is Ok.
 
@@ -230,7 +253,8 @@ class Result(ABC, Generic[E, T]):
 
 class Ok(Result[E, T]):
     """
-    A Result representing a successful operation containing a value of type T.
+    A concrente Result implementation representing a successful operation
+    containing a value of type T.
     """
 
     __slots__ = ('_value',)
@@ -256,7 +280,8 @@ class Ok(Result[E, T]):
 
 class Err(Result[E, T]):
     """
-    A Result representing a failed operation containing an error of type E.
+    A concrete Result implementation representing a failed operation containing
+    an error of type E.
     """
 
     __slots__ = ('_error',)
@@ -290,9 +315,9 @@ class Err(Result[E, T]):
 class Option(ABC, Generic[T]):
     """An Option type that can either be Some or Nil.
 
-    This is a generic class that can be used to represent an optional value.
-    It can hold a value of type T if it exists (Some), or be empty (Nil)
-    if the value does not exist.
+    This is a generic class used to represent an optional value. It can hold a
+    value of type T if it exists (Some), or be empty (Nil) if the value does not
+    exist.
     """
 
     @staticmethod
@@ -319,8 +344,8 @@ class Option(ABC, Generic[T]):
 
     def _fold(self, on_some: Callable[[T], U], on_none: Callable[[], U]) -> U:
         """
-        Applies a function to the value if it exists, otherwise applies
-        another function.
+        Applies a function to the value if it exists, otherwise applies a
+        function that returns a default value.
 
         Args:
             on_some: Function to apply if the Option is Some, taking the
@@ -437,6 +462,8 @@ class Option(ABC, Generic[T]):
         Applies a function to the value if it exists, returning the Option
         itself.
 
+        Useful for debugging or logging purposes.
+
         Args:
             func: Function to apply to the contained value if the Option is
                 Some.
@@ -468,7 +495,9 @@ class Option(ABC, Generic[T]):
 
 
 class Some(Option[T]):
-    """An Option representing a value of type T that exists."""
+    """
+    A concrete Option implementation representing a value of type T that exists.
+    """
 
     __slots__ = ('_value',)
 
@@ -489,7 +518,7 @@ class Some(Option[T]):
 
 
 class Nil(Option[T]):
-    """An Option representing the absence of a value."""
+    """A concrete Option implementation representing the absence of a value."""
 
     def unwrap(self) -> T:
         raise RuntimeError("Called unwrap on a Nil Option")
