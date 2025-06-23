@@ -20,19 +20,20 @@ def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
 # `Ok(result)` on success or an `Err(exception)` on an exception.
 
 @lift.result
-def coerce_value(key: str, val: str) -> tuple[str, object]:
+def convert_var(kv: tuple[str, str]) -> tuple[str, object]:
+    key, val = kv
     if val.lower() in ("true", "false"):
         return (key, val.lower() == "true")
     elif val.isdigit():
         return (key, int(val))
     else:
-        return (key, val)  # fallback to string
+        return (key, val)  # keep it as string
 
 
 def process_line(line: str) -> Result[ValueError, tuple[str, object]]:
     return (
         parse_var(line)
-        .and_then(lambda kv: coerce_value(*kv))
+        .and_then(convert_var)
     )
 
 
