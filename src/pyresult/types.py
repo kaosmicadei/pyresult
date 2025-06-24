@@ -244,6 +244,25 @@ class Result(ABC, Generic[E, T]):
             func(self.unwrap())
         return self
 
+    def on_err(self, func: Callable[[E], None]) -> Result[E, T]:
+        """Applies a function to the contained error if the Result is Err,
+        allowing side effects without changing the Result.
+
+        Useful for debugging or logging purposes.
+
+        When placed at the end of a chain, it covers all possible errors along
+        the entire chain.
+
+        Args:
+            func: Function to apply to the contained error if the Result is Err.
+
+        Returns:
+            The Result unchanged.
+        """
+        if self.is_err():
+            func(self._get_error())
+        return self
+
     def as_option(self) -> Option[T]:
         """Converts the Result into an Option."""
         return self._fold(
