@@ -19,16 +19,15 @@ def benchmark(input_files: list[Path], output_file: Path) -> Result[E, None]:
         .and_then(aggregate_results)
         .and_then(summarize)
         .and_then(lambda r: save(r, output_file))
-        .on_err(log_error)
+        .on_err(logger.error)
     )
 
 
-@lift.result
 def run_task(file: Path) -> Result[E, T]:
     return (
         load(file)
         .and_then(execute_algorithm)
-        .on_err(log_error)
+        .on_err(logger.error)
     )
 
 @lift.result
@@ -43,9 +42,6 @@ def summarize(data: T) -> U: ...
 
 @lift.result
 def save(data: T, file: Path) -> None: ...
-
-
-def log_error(err: E) -> None: ...
 
 
 # === Example!
