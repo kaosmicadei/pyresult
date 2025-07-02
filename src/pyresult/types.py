@@ -726,8 +726,12 @@ class Iter(Generic[T]):
         return Iter(map(func, self._data))
 
     def for_each(self, func: Callable[[T], U]) -> Iter[U]:
-        """Similar to map, but used to keep semantic clarity."""
-        return self.map(func)
+        """Strict version of map that applies the function to each element
+        in the iterable and returns a new Iter containing the results.
+
+        This method is useful when the function has side effects.
+        """
+        return Iter([func(item) for item in self._data])
 
     def filter(self, func: Callable[[T], bool]) -> Iter[T]:
         """
@@ -773,6 +777,17 @@ class Iter(Generic[T]):
         for item in iterator:
             result = func(result, item)
         return result
+    
+    def enumerate(self) -> Iter[tuple[int, T]]:
+        """
+        Enumerates the elements of the iterable, returning an Iter of tuples
+        containing the index and the element.
+
+        Returns:
+            An Iter of tuples where each tuple contains the index and the
+            corresponding element from the original iterable.
+        """
+        return Iter(enumerate(self._data))
 
     def collect(self, container: Callable[..., U]) -> U:
         """
@@ -845,4 +860,10 @@ class ParallelIter(Iter[T]):
     def map(self, func: Callable[[T], U]) -> ParallelIter[U]:
         raise NotImplementedError(
             "ParallelIter.map is not implemented yet. Use Iter.map instead."
+        )
+    
+    # Override the `for_each` method to allow parallel execution.
+    def for_each(self, func: Callable[[T], U]) -> ParallelIter[U]:
+        raise NotImplementedError(
+            "ParallelIter.for_each is not implemented yet. Use Iter.for_each instead."
         )
