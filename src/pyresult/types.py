@@ -23,7 +23,7 @@ failure of one input should not prevent the processing of the others.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, Iterable, NoReturn, TypeVar
+from typing import Callable, Generic, Iterable, TypeVar
 
 
 T = TypeVar('T')
