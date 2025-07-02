@@ -278,6 +278,7 @@ class Ok(Result[E, T]):
     """
 
     __slots__ = ('_value',)
+    __match_args__ = ('_value',)
 
     def __init__(self, value: T) -> None:
         self._value = value
@@ -305,6 +306,7 @@ class Err(Result[E, T]):
     """
 
     __slots__ = ('_error',)
+    __match_args__ = ('_error',)
 
     def __init__(self, error: E) -> None:
         self._error = error
@@ -520,6 +522,7 @@ class Some(Option[T]):
     """
 
     __slots__ = ('_value',)
+    __match_args__ = ('_value',)
 
     def __init__(self, value: T):
         self._value = value
@@ -539,6 +542,9 @@ class Some(Option[T]):
 
 class Nil(Option[T]):
     """A concrete Option implementation representing the absence of a value."""
+    
+    __slots__ = ()
+    __match_args__ = ()
 
     def unwrap(self) -> T:
         raise RuntimeError("Called unwrap on a Nil Option")
