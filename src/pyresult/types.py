@@ -23,7 +23,7 @@ failure of one input should not prevent the processing of the others.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Iterable, NoReturn, TypeVar
+from typing import Callable, Generic, Iterable, NoReturn, TypeVar
 
 
 T = TypeVar('T')
@@ -338,7 +338,7 @@ class Ok(Result[E, T]):
     def unwrap(self) -> T:
         return self._value
 
-    def _get_error(self) -> NoReturn:
+    def _get_error(self) -> E:
         raise RuntimeError("Tried to get an error from an Ok result")
 
     def __repr__(self) -> str:
@@ -363,7 +363,7 @@ class Err(Result[E, T]):
     def is_ok(self) -> bool:
         return False
 
-    def unwrap(self) -> Any:
+    def unwrap(self) -> T:
         raise self._get_error()
 
     def _get_error(self) -> E:
@@ -786,6 +786,9 @@ class Iter(Generic[T]):
             A new container containing the elements of the iterable.
         """
         return container(self._data)
+    
+    def flatten(self: Iter[Iterable[T]]) -> Iter[T]:
+        return Iter(item for sublist in self._data for item in sublist)
 
     # Conversion methods
     # ------------------
@@ -827,4 +830,19 @@ class Iter(Generic[T]):
             .filter(lambda x: isinstance(x, Option) and x.is_some())
             .map(lambda x: x.unwrap())  # type: ignore
             .as_option()
+        )
+
+
+# TODO: Implement ParallelIter.
+class ParallelIter(Iter[T]):
+    """A ParallelIter that extends Iter to support parallel processing.
+
+    This class is intended to be used for parallel processing of the contained
+    iterable, allowing for concurrent execution of operations on the elements.
+    """
+
+    # Override the `map` method to allow parallel execution.
+    def map(self, func: Callable[[T], U]) -> ParallelIter[U]:
+        raise NotImplementedError(
+            "ParallelIter.map is not implemented yet. Use Iter.map instead."
         )
