@@ -1,4 +1,4 @@
-from pyresult import Result, lift
+from pyresult import Iter, Result, lift
 
 
 def parse_var(line: str) -> Result[ValueError, tuple[str, str]]:
@@ -22,11 +22,27 @@ def convert_var(kv: tuple[str, str]) -> tuple[str, object]:
         return (key, val)  # keep it as string
 
 
-def process_line(line: str) -> Result[Exception, tuple[str, object]]:
+def parse_line(line: str) -> Result[Exception, tuple[str, object]]:
     return (
         parse_var(line)
         .and_then(convert_var)
     )
+
+
+def pprint(
+    idx: int, result: Result[Exception, tuple[str, object]]
+) -> None:
+    result.map_or_else(
+        lambda kv: print(f"[OK #{idx}] {kv[0]} = {kv[1]!r}"),
+        on_err=lambda err: print(f"[ERR #{idx}] {type(err).__name__}: {err}")
+    )
+
+
+def parse(content: str) -> None:
+    (Iter(content.splitlines())
+        .map(parse_line)
+        .enumerate()
+        .for_each(lambda idx_result: pprint(*idx_result)))
 
 
 inputs = """HOST=localhost
@@ -36,13 +52,7 @@ LOG_LEVEL=info
 INVALID_LINE
 """
 
-results = [process_line(line) for line in inputs.splitlines()]
-
-for i, res in enumerate(results):
-    res.map_or_else(
-        lambda kv: print(f"[OK #{i}] {kv[0]} = {kv[1]!r}"),
-        on_err=lambda err: print(f"[ERR #{i}] {type(err).__name__}: {err}")
-    )
+parse(inputs)
 
 # Output:
 # [OK #0] HOST = 'localhost'

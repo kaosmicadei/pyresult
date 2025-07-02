@@ -6,12 +6,10 @@ from pyresult import Result, Iter, lift
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
-U = TypeVar("U")
-E = TypeVar("E", bound=BaseException)
 
-
-def benchmark(input_files: list[Path], output_file: Path) -> Result[E, None]:
+def benchmark(
+    input_files: list[Path], output_file: Path
+) -> Result[Exception, None]:
     return (
         Iter(input_files)
         .for_each(run_task)  # Generates an Iter[Result[E, T]]
@@ -23,6 +21,12 @@ def benchmark(input_files: list[Path], output_file: Path) -> Result[E, None]:
     )
 
 
+# Opaque functions to represent the steps in the pipeline
+T = TypeVar("T")  # Input type for the algorithm
+U = TypeVar("U")  # Output type for the algorithm
+E = TypeVar("E", bound=BaseException)  # Error type for the algorithm
+
+
 def run_task(file: Path) -> Result[E, T]:
     return (
         load(file)
@@ -30,11 +34,14 @@ def run_task(file: Path) -> Result[E, T]:
         .on_err(logger.error)
     )
 
+
 @lift.result
 def load(file: Path) -> T: ...
 
+
 @lift.result
 def aggregate_results(data: list[T]) -> U: ...
+
 
 @lift.result
 def summarize(data: T) -> U: ...
