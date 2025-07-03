@@ -764,7 +764,7 @@ class Iter(Generic[T]):
             result = func(result, item)
         return result
 
-    def fold1(self, func: Callable[[T, T], T]) -> T:
+    def fold1(self, func: Callable[[T, T], T]) -> Result[ValueError, T]:
         """
         Similar to fold, but does not require an initial value. It uses the
         first element of the iterable as the initial value assuming the iterable
@@ -772,12 +772,14 @@ class Iter(Generic[T]):
         """
         iterator = iter(self._data)
 
-        assert (result := next(iterator)), "Cannot fold an empty iterable"
+        # Get the first element to use as the initial value.
+        if not (first := next(iterator, None)):
+            return Result.Err(ValueError("Cannot fold an empty Iter"))
 
-        for item in iterator:
-            result = func(result, item)
-        return result
-    
+        # Reuses the fold method with the first element as the initial value
+        # avoiding duplicating the logic.
+        return Result.Ok(self.fold(func, first))
+
     def enumerate(self) -> Iter[tuple[int, T]]:
         """
         Enumerates the elements of the iterable, returning an Iter of tuples
