@@ -13,7 +13,7 @@ def benchmark(
     return (
         Iter(input_files)
         .for_each(run_task)  # Generates an Iter[Result[E, T]]
-        .flatten_result()  # Extract successful results into a Result[E, Iterable[T]]
+        .flatten_result()  # Extract successful results only: Result[E, Iter[T]]
         .and_then(aggregate_results)
         .and_then(summarize)
         .and_then(lambda r: save(r, output_file))
@@ -40,7 +40,7 @@ def load(file: Path) -> T: ...
 
 
 @lift.result
-def aggregate_results(data: list[T]) -> U: ...
+def aggregate_results(data: Iter[T]) -> U: ...
 
 
 @lift.result

@@ -712,26 +712,32 @@ class Iter(Generic[T]):
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Iter) and list(self._data) == list(other._data)
 
-    def map(self, func: Callable[[T], U]) -> Iter[U]:
+    def take(self, n: int) -> Iter[T]:
         """
-        Applies a function to each element in the iterable.
+        Returns an Iter containing the first n elements of the iterable.
 
         Args:
-            func: Function to apply to each element in the iterable.
+            n: The number of elements to take from the iterable.
 
         Returns:
-            A new Iter containing the results of applying the function to each
-            element in the original iterable.
+            A new Iter containing the first n elements of the original
+            iterable.
         """
-        return Iter(map(func, self._data))
+        return Iter(item for _, item in zip(range(n), self._data))
 
-    def for_each(self, func: Callable[[T], U]) -> Iter[U]:
-        """Strict version of map that applies the function to each element
-        in the iterable and returns a new Iter containing the results.
-
-        This method is useful when the function has side effects.
+    def take_while(self, predicate: Callable[[T], bool]) -> Iter[T]:
         """
-        return Iter([func(item) for item in self._data])
+        Returns an Iter containing elements from the iterable as long as the
+        predicate function returns True.
+
+        Args:
+            predicate: A function that takes an element and returns True if the
+                element should be included.
+
+        Returns:
+            A new Iter containing elements that satisfy the predicate.
+        """
+        return Iter(item for item in self._data if predicate(item))
 
     def filter(self, func: Callable[[T], bool]) -> Iter[T]:
         """
@@ -745,6 +751,17 @@ class Iter(Generic[T]):
             function returns True.
         """
         return Iter(filter(func, self._data))
+
+    def enumerate(self) -> Iter[tuple[int, T]]:
+        """
+        Enumerates the elements of the iterable, returning an Iter of tuples
+        containing the index and the element.
+
+        Returns:
+            An Iter of tuples where each tuple contains the index and the
+            corresponding element from the original iterable.
+        """
+        return Iter(enumerate(self._data))
 
     def fold(self, func: Callable[[U, T], U], initial: U) -> U:
         """
@@ -780,16 +797,56 @@ class Iter(Generic[T]):
         # avoiding duplicating the logic.
         return Result.Ok(self.fold(func, first))
 
-    def enumerate(self) -> Iter[tuple[int, T]]:
+    def map(self, func: Callable[[T], U]) -> Iter[U]:
         """
-        Enumerates the elements of the iterable, returning an Iter of tuples
-        containing the index and the element.
+        Applies a function to each element in the iterable.
+
+        Args:
+            func: Function to apply to each element in the iterable.
 
         Returns:
-            An Iter of tuples where each tuple contains the index and the
-            corresponding element from the original iterable.
+            A new Iter containing the results of applying the function to each
+            element in the original iterable.
         """
-        return Iter(enumerate(self._data))
+        return Iter(map(func, self._data))
+
+    def for_each(self, func: Callable[[T], U]) -> Iter[U]:
+        """Strict version of map that applies the function to each element
+        in the iterable and returns a new Iter containing the results.
+
+        This method is useful when the function has side effects.
+        """
+        return Iter([func(item) for item in self._data])
+
+    def sum(self) -> Result[Exception, T]:
+        """
+        Sums the elements of the iterable. This method assumes that the
+        elements are numeric and can be summed.
+
+        Returns:
+            The sum of the elements in the iterable.
+        """
+        try:
+            return Result.Ok(
+                self.fold1(lambda acc, x: acc + x)  # type: ignore
+            )
+        except Exception as e:
+            return Result.Err(e)
+
+    def product(self) -> Result[Exception, T]:
+        """
+        Multiplies the elements of the iterable. This method assumes that the
+        elements are numeric and can be multiplied.
+
+        Returns:
+            The product of the elements in the iterable.
+        """
+        try:
+            return Result.Ok(
+                self.fold1(lambda acc, x: acc * x)  # type: ignore
+            )
+        except Exception as e:
+            return Result.Err(e)
 
     def collect(self, container: Callable[..., U]) -> U:
         """
@@ -803,22 +860,45 @@ class Iter(Generic[T]):
             A new container containing the elements of the iterable.
         """
         return container(self._data)
-    
+
     def flatten(self: Iter[Iterable[T]]) -> Iter[T]:
+        """
+        Flattens the nested Iterables into a single Iter.
+        This method is useful when the Iter contains other Iterables and you
+        want to combine all elements into a single Iter.
+
+        Returns:
+            A new Iter containing all elements from the nested Iterables.
+        """
+        # Using a generator expression to flatten the nested Iterables for lazy
+        # evaluation avoiding intermediate lists.
         return Iter(item for sublist in self._data for item in sublist)
+
+    def zip(self, other: Iter[U]) -> Iter[tuple[T, U]]:
+        """
+        Zips two Iterables together, returning an Iter of tuples containing
+        elements from both Iterables.
+
+        Args:
+            other: Another Iter to zip with the current one.
+
+        Returns:
+            A new Iter containing tuples of paired elements from both Iterables.
+        """
+        return Iter(zip(self._data, other._data))
 
     # Conversion methods
     # ------------------
 
-    def as_result(self) -> Result[ValueError, Iterable[T]]:
+    def as_result(self) -> Result[ValueError, Iter[T]]:
         """ Converts the Iter into a Result."""
         return (
-            self.collect(Result.Ok)
+            Result.Ok(self)
             if self._data
             else Result.Err(ValueError("Empty Iter"))
         )
 
-    def flatten_result(self) -> Result[E, Iterable[T]]:
+    def flatten_result(self) -> Result[E, Iter[T]]:
         """
         Flattens the Iter into a Result, extracting all Ok values. This method
         is useful when the Iter contains Results and you want to collect only
@@ -832,11 +912,11 @@ class Iter(Generic[T]):
             .as_result()
         )
 
-    def as_option(self) -> Option[Iterable[T]]:
+    def as_option(self) -> Option[Iter[T]]:
         """Converts the Iter into an Option."""
-        return self.collect(Option.Some) if self._data else Option.Nil()
+        return Option.Some(self) if self._data else Option.Nil()
 
-    def flatten_option(self) -> Option[T]:
+    def flatten_option(self) -> Option[Iter[T]]:
         """
         Flattens the Iter into an Option, extracting all Some values. This
         method is useful when the Iter contains Options and you want to collect
@@ -863,7 +943,7 @@ class ParallelIter(Iter[T]):
         raise NotImplementedError(
             "ParallelIter.map is not implemented yet. Use Iter.map instead."
         )
-    
+
     # Override the `for_each` method to allow parallel execution.
     def for_each(self, func: Callable[[T], U]) -> ParallelIter[U]:
         raise NotImplementedError(
