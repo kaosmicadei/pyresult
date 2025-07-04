@@ -724,20 +724,22 @@ class Iter(Generic[T]):
             iterable.
         """
         return Iter(item for _, item in zip(range(n), self._data))
-
-    def take_while(self, predicate: Callable[[T], bool]) -> Iter[T]:
+    
+    def skip(self, n: int) -> Iter[T]:
         """
-        Returns an Iter containing elements from the iterable as long as the
-        predicate function returns True.
+        Skips the first n elements of the iterable.
 
         Args:
-            predicate: A function that takes an element and returns True if the
-                element should be included.
+            n: The number of elements to skip.
 
         Returns:
-            A new Iter containing elements that satisfy the predicate.
+            A new Iter containing the elements after skipping the first n
+            elements.
         """
-        return Iter(item for item in self._data if predicate(item))
+        for _ in range(n):
+            next(self._data, None)  # Skip n elements silencing StopIteration
+
+        return Iter(self._data)
 
     def filter(self, func: Callable[[T], bool]) -> Iter[T]:
         """
@@ -826,6 +828,9 @@ class Iter(Generic[T]):
         Returns:
             The sum of the elements in the iterable.
         """
+
+        # If the contained type does not support addition, this will raise
+        # a TypeError which we catch and return as an Err Result.
         try:
             return Result.Ok(
                 self.fold1(lambda acc, x: acc + x)  # type: ignore
@@ -841,6 +846,9 @@ class Iter(Generic[T]):
         Returns:
             The product of the elements in the iterable.
         """
+
+        # If the contained type does not support multiplication, this will
+        # raise a TypeError which we catch and return as an Err Result.
         try:
             return Result.Ok(
                 self.fold1(lambda acc, x: acc * x)  # type: ignore
