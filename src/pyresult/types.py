@@ -794,40 +794,47 @@ class Iter(Generic[T]):
             corresponding element from the original iterable.
         """
         return Iter(enumerate(self._data))
-
-    def fold(self, func: Callable[[U, T], U], initial: U) -> U:
+    
+    def fold(self, func: Callable[[U, T], U], initial: U | None = None) -> Result[ValueError, U]:
         """
-        Reduces the iterable to a single value by applying a function.
+        Reduces the iterable to a single value by applying a function `func`
+        consecutively to each element, using an accumulator.
 
         Args:
             func: Function that takes an accumulator and an element, returning
                 the updated accumulator.
-            initial: Initial value for the accumulator.
+            initial: Initial value for the accumulator. If None, the first
+                element of the iterable is used as the initial value.
 
         Returns:
-            The final accumulated value after applying the function to all
-            elements in the iterable.
+            A Result containing the final accumulated value or an error if the
+            iterable is empty and no initial value was provided.
+        """
+        if initial is None:
+            return self._fold1(func)  # type: ignore
+        return self._fold(func, initial)
+
+    def _fold(self, func: Callable[[U, T], U], initial: U) -> Result[ValueError, U]:
+        """
+        Folds the iterable using the provided function and an initial value.
         """
         result = initial
         for item in self._data:
             result = func(result, item)
-        return result
+        return Result.Ok(result)
 
-    def fold1(self, func: Callable[[T, T], T]) -> Result[ValueError, T]:
-        """
-        Similar to fold, but does not require an initial value. It uses the
-        first element of the iterable as the initial value assuming the iterable
-        is non-empty.
+    def _fold1(self, func: Callable[[T, T], T]) -> Result[ValueError, T]:
+        """ Similar to fold, but uses the first element as the initial value.
+
+        If the iterable is empty, it returns an `Result.Err`.
         """
         iterator = iter(self._data)
 
-        # Get the first element to use as the initial value.
-        if (first := next(iterator, None)) is None:
+        try:
+            first = next(iterator)
+            return Result.Ok(self.fold(func, first))
+        except StopIteration:
             return Result.Err(ValueError("Cannot fold an empty Iter"))
-
-        # Reuses the fold method with the first element as the initial value
-        # avoiding duplicating the logic.
-        return Result.Ok(self.fold(func, first))
 
     def map(self, func: Callable[[T], U]) -> Iter[U]:
         """
@@ -879,7 +886,7 @@ class Iter(Generic[T]):
         # raise a TypeError which we catch and return as an Err Result.
         try:
             return Result.Ok(
-                self.fold1(lambda acc, x: acc * x)  # type: ignore
+                self.fold(lambda acc, x: acc * x)  # type: ignore
             )
         except Exception as e:
             return Result.Err(e)
