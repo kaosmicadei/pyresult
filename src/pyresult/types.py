@@ -23,6 +23,7 @@ failure of one input should not prevent the processing of the others.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from itertools import takewhile, dropwhile
 from typing import Callable, Generic, Iterable, TypeVar
 
 
@@ -725,6 +726,20 @@ class Iter(Generic[T]):
         """
         return Iter(item for _, item in zip(range(n), self._data))
     
+    def take_while(self, predicate: Callable[[T], bool]) -> Iter[T]:
+        """
+        Returns an Iter containing elements from the iterable as long as the
+        predicate function returns True.
+
+        Args:
+            predicate: A function that takes an element and returns True if it
+                should be included in the result.
+
+        Returns:
+            A new Iter containing elements that satisfy the predicate.
+        """
+        return Iter(takewhile(predicate, self._data))
+    
     def skip(self, n: int) -> Iter[T]:
         """
         Skips the first n elements of the iterable.
@@ -740,6 +755,21 @@ class Iter(Generic[T]):
             next(self._data, None)  # Skip n elements silencing StopIteration
 
         return Iter(self._data)
+    
+    def skip_while(self, predicate: Callable[[T], bool]) -> Iter[T]:
+        """
+        Skips elements from the iterable as long as the predicate function
+        returns True.
+
+        Args:
+            predicate: A function that takes an element and returns True if it
+                should be skipped.
+
+        Returns:
+            A new Iter containing elements after skipping those that satisfy the
+            predicate.
+        """
+        return Iter(dropwhile(predicate, self._data))
 
     def filter(self, func: Callable[[T], bool]) -> Iter[T]:
         """
@@ -792,7 +822,7 @@ class Iter(Generic[T]):
         iterator = iter(self._data)
 
         # Get the first element to use as the initial value.
-        if not (first := next(iterator, None)):
+        if (first := next(iterator, None)) is None:
             return Result.Err(ValueError("Cannot fold an empty Iter"))
 
         # Reuses the fold method with the first element as the initial value
@@ -832,9 +862,7 @@ class Iter(Generic[T]):
         # If the contained type does not support addition, this will raise
         # a TypeError which we catch and return as an Err Result.
         try:
-            return Result.Ok(
-                self.fold1(lambda acc, x: acc + x)  # type: ignore
-            )
+            return Result.Ok(sum(self._data))  # type: ignore
         except Exception as e:
             return Result.Err(e)
 
